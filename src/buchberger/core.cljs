@@ -1,5 +1,10 @@
 (ns buchberger.core
-    (:require [reagent.core :as reagent :refer [atom]]))
+    (:require 
+      [reagent.core :as reagent :refer [atom]]
+      [instaparse.core :as insta :refer-macros [defparser]]
+      [clojure.pprint :as pp]
+    )
+)
 
 (enable-console-print!)
 
@@ -19,7 +24,21 @@
 
 (defn more-polys [] (println "Not implemented (more-polys)!"))
 
-(defn do-calc [] (println "Not implemented (do-calc)!"))
+(insta/defparser parse-poly
+    "polynomial = ws monomial (plus monomial)*
+     <ws> = <' '*>
+     <plus> = <'+'> ws
+     <times> = <(' ' | '*')> ws
+     <pow> = <'^'> ws
+     monomial = (number | sympower) (times sympower)*
+     sympower = symbol (pow natnum ws)?
+     symbol = <'x'> natnum ws
+     number = '-'? natnum ('.' natnum)? ws
+     natnum = #'\\d+'
+    "
+)
+
+(defn do-calc [] (pp/pprint (parse-poly (:poly @app-state))))
 
 (defn readpoly []
   [:div {:class-name "poly-inputs"}
