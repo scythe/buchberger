@@ -38,6 +38,21 @@
     "
 )
 
+(defn condense-monomial [mv]
+  (let [factors (rest mv)] 
+    (match [(first factors)]
+     [[:number & numval]] `((get-num-val `(numval)) (faclist-to-powlist (rest factors)))
+     [[:sympower & _]] `(1 (faclist-to-powlist factors))
+     [_] `()
+    )
+  )
+)
+
+(defn polyvec-to-list [pv]
+  (sort-grevlex (map condense-monomial (rest pv)))
+)
+
+;; TODO sort polynomials grevlex
 (defn do-calc [] (pp/pprint (parse-poly (:poly @app-state))))
 
 (defn readpoly []
