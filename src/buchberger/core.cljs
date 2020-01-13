@@ -34,17 +34,31 @@
      sympower = symbol (pow natnum ws)?
      symbol = <'x'> natnum ws
      number = '-'? natnum ('.' natnum)? ws
-     natnum = #'\\d+'
+     <natnum> = #'\\d+'
     "
 )
+
+(defn get-num-val [& nparts] (read-string (str nparts)))
 
 (defn condense-monomial [mv]
   (let [factors (rest mv)] 
     (match [(first factors)]
-     [[:number & numval]] `((get-num-val `(numval)) (faclist-to-powlist (rest factors)))
+     [[:number & numval]] `((get-num-val numval) (faclist-to-powlist (rest factors)))
      [[:sympower & _]] `(1 (faclist-to-powlist factors))
      [_] `()
     )
+  )
+)
+
+(defn sympowervec-to-pair [spvec]
+  (let [spext (conj spvec "1")]
+    {(get-num-val ((spext 1) 1)) (get-num-val (spext 2))}
+  )
+)
+
+(defn faclist-to-powlist [faclist]
+  (let [merge-sum (fn [m1 m2] (merge-with + m1 m2))]
+    (powmap-to-powlist (reduce merge-sum (map sympowervec-to-pair faclist)))
   )
 )
 
