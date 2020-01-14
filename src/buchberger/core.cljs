@@ -40,16 +40,6 @@
 
 (defn get-num-val [& nparts] (read-string (str nparts)))
 
-(defn condense-monomial [mv]
-  (let [factors (rest mv)] 
-    (match [(first factors)]
-     [[:number & numval]] `((get-num-val numval) (faclist-to-powlist (rest factors)))
-     [[:sympower & _]] `(1 (faclist-to-powlist factors))
-     [_] `()
-    )
-  )
-)
-
 (defn v-at-n [n v]
   (if (<= n 1) ;; don't allow x_n for n<1
     '(v)
@@ -76,8 +66,52 @@
   (reduce sum-lists (map sympowervec-to-list faclist))
 )
 
+(defn condense-monomial [mv]
+  (let [factors (rest mv)] 
+    (match [(first factors)]
+     [[:number & numval]] `((get-num-val numval) (faclist-to-powlist (rest factors)))
+     [[:sympower & _]] `(1 (faclist-to-powlist factors))
+     [_] `()
+    )
+  )
+)
+
+(defn cmp-grevlex [l1 l2]
+  (let [s1 (reduce + l1)
+        s2 (reduce + l2)
+        n1 (count l1)
+        n2 (count l2)
+        cmp-lists (fn cmp-lists [l1 l2]
+                    (if (empty? l1)
+                      0
+                      (if (> (first l1) (first l2))
+                        -1
+                        (if (< (first l1) (first l2))
+                          1
+                          (cmp-lists (rest l1) (rest l2))
+                        )
+                      )
+                    )
+                  )
+       ]
+    (if (> s1 s2)
+      1
+      (if (< s1 s2)
+        -1
+        (if (> n1 n2)
+          -1
+          (if (< n1 n2)
+            1
+            (cmp-lists (reverse l1) (reverse l2))
+          )
+        )
+      )
+    )
+  )
+)
+
 (defn polyvec-to-list [pv]
-  (sort-grevlex (map condense-monomial (rest pv)))
+  (sort-by (fn [x] (nth x 1)) cmp-grevlex (map condense-monomial (rest pv)))
 )
 
 ;; TODO sort polynomials grevlex
