@@ -50,16 +50,30 @@
   )
 )
 
-(defn sympowervec-to-pair [spvec]
+(defn v-at-n [n v]
+  (if (<= n 1) ;; don't allow x_n for n<1
+    '(v)
+    (conj (v-at-n (- n 1) v) 0)
+  )
+)
+
+(defn sympowervec-to-list [spvec]
   (let [spext (conj spvec "1")]
-    {(get-num-val ((spext 1) 1)) (get-num-val (spext 2))}
+    (v-at-n (get-num-val ((spext 1) 1)) (get-num-val (spext 2)))
+  )
+)
+
+(defn sum-lists [l1 l2]
+  (if (< (count l1) (count l2))
+    (sum-lists l2 l1)
+    (for [x1 l1 i (iterate inc 0)]
+      (+ x1 (nth l2 i 0))
+    )
   )
 )
 
 (defn faclist-to-powlist [faclist]
-  (let [merge-sum (fn [m1 m2] (merge-with + m1 m2))]
-    (powmap-to-powlist (reduce merge-sum (map sympowervec-to-pair faclist)))
-  )
+  (reduce sum-lists (map sympowervec-to-list faclist))
 )
 
 (defn polyvec-to-list [pv]
