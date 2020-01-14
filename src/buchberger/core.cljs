@@ -110,12 +110,28 @@
   )
 )
 
+(defn condense-identical-monomials [pl]
+  (let [add (fn [pl, m]
+              (let [m0 (first pl) mdeg (nth m 1)]
+                (if (and m0 (= (nth m0 1) mdeg)) ;; if monomials exist and have same multidegree
+                  (conj (rest pl) '((+ (first m0) (first m)) mdeg))
+                  (conj pl m)
+                )
+              )
+            )
+       ]
+    (reverse (reduce add '() pl)) ;; piping a list through reduce and conj reverses it, so undo that
+  )
+)
+
 (defn polyvec-to-list [pv]
-  (sort-by (fn [x] (nth x 1)) cmp-grevlex (map condense-monomial (rest pv)))
+  (condense-identical-monomials
+    (sort-by (fn [x] (nth x 1)) cmp-grevlex (map condense-monomial (rest pv)))
+  )
 )
 
 ;; TODO sort polynomials grevlex
-(defn do-calc [] (pp/pprint (parse-poly (:poly @app-state))))
+(defn do-calc [] (pp/pprint (polyvec-to-list (parse-poly (:poly @app-state)))))
 
 (defn readpoly []
   [:div {:class-name "poly-inputs"}
