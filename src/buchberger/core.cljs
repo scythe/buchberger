@@ -32,7 +32,13 @@
   ]
 )
 
-(defn more-polys [] (println "Not implemented (more-polys)!"))
+(defn more-polys [] 
+  (do
+    (echo "test" (:result @app-state))
+    (swap! app-state update-in [:result] (constantly "test x<sub>1</sub>"))
+    (echo "test2" (:result @app-state))
+  )
+)
 
 (insta/defparser parse-poly
     "polynomial = ws monomial (plus monomial)*
@@ -144,7 +150,8 @@
 
 (defn readpoly []
   [:div {:class-name "poly-inputs"}
-   [:h3 "Polynomial generators"]
+   [:h3 "Polynomial generators x<sub>1</sub>"]
+   [:p {:dangerouslySetInnerHTML {:__html "test x<sub>1</sub>"}}]
    [:input {:type "text"
             :placeholder "Polynomial, e.g. x1^2 + 3x1x2 + 4"
             :value (:poly @app-state)
@@ -165,7 +172,7 @@
    (if (not= (:result @app-state) "")
      [:h3 "Result"]
    )
-   (:result @app-state)
+   [:p {:dangerouslySetInnerHTML {:__html (:result @app-state)}}]
   ]
 )
   
