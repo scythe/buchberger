@@ -3,12 +3,22 @@
       [reagent.core :as reagent :refer [atom]]
       [instaparse.core :as insta :refer-macros [defparser]]
       [clojure.pprint :as pp]
+      [clojure.reader :as cljr]
+      [clojure.core.match :refer-macros [match]]
+      [clojure.string :as string]
     )
 )
 
 (enable-console-print!)
 
 (println "This text is printed from src/buchberger/core.cljs. Go ahead and edit it and see reloading in action.")
+
+(defn echo [msg x]
+  (do
+    (println msg x)
+    x
+  )
+)
 
 ;; define your app data so that it doesn't get over-written on reload
 
@@ -38,11 +48,11 @@
     "
 )
 
-(defn get-num-val [& nparts] (read-string (str nparts)))
+(defn get-num-val [nparts] (cljr/read-string (echo "str to read" (string/join nparts))))
 
 (defn v-at-n [n v]
   (if (<= n 1) ;; don't allow x_n for n<1
-    '(v)
+    (list v)
     (conj (v-at-n (- n 1) v) 0)
   )
 )
@@ -54,23 +64,22 @@
 )
 
 (defn sum-lists [l1 l2]
-  (if (< (count l1) (count l2))
+  (if (< (count (echo "sum-lists l1" l1)) (count (echo "sum-lists l2" l2)))
     (sum-lists l2 l1)
-    (for [x1 l1 i (iterate inc 0)]
-      (+ x1 (nth l2 i 0))
-    )
+    (map (fn [x1 i] (+ x1 (nth l2 i 0))) l1 (iterate inc 0))
   )
 )
 
 (defn faclist-to-powlist [faclist]
-  (reduce sum-lists (map sympowervec-to-list faclist))
+  (reduce sum-lists (echo "reduce sl coll" (map sympowervec-to-list faclist)))
 )
 
 (defn condense-monomial [mv]
   (let [factors (rest mv)] 
     (match [(first factors)]
-     [[:number & numval]] `((get-num-val numval) (faclist-to-powlist (rest factors)))
-     [[:sympower & _]] `(1 (faclist-to-powlist factors))
+     [[:number & numval]] (list (echo "gnv" (get-num-val numval)) 
+                                (faclist-to-powlist (rest factors)))
+     [[:sympower & _]] (list 1 (faclist-to-powlist factors))
      [_] `()
     )
   )
@@ -79,15 +88,15 @@
 (defn cmp-grevlex [l1 l2]
   (let [s1 (reduce + l1)
         s2 (reduce + l2)
-        n1 (count l1)
-        n2 (count l2)
+        n1 (count (echo "cmp-grevlex l1" l1))
+        n2 (count (echo "cmp-grevlex l2" l2))
         cmp-lists (fn cmp-lists [l1 l2]
                     (if (empty? l1)
                       0
                       (if (> (first l1) (first l2))
-                        -1
+                        1
                         (if (< (first l1) (first l2))
-                          1
+                          -1
                           (cmp-lists (rest l1) (rest l2))
                         )
                       )
@@ -95,13 +104,13 @@
                   )
        ]
     (if (> s1 s2)
-      1
+      -1
       (if (< s1 s2)
-        -1
+        1
         (if (> n1 n2)
-          -1
+          1
           (if (< n1 n2)
-            1
+            -1
             (cmp-lists (reverse l1) (reverse l2))
           )
         )
@@ -110,11 +119,11 @@
   )
 )
 
-(defn condense-identical-monomials [pl]
+(defn combine-identical-monomials [pl]
   (let [add (fn [pl, m]
               (let [m0 (first pl) mdeg (nth m 1)]
                 (if (and m0 (= (nth m0 1) mdeg)) ;; if monomials exist and have same multidegree
-                  (conj (rest pl) '((+ (first m0) (first m)) mdeg))
+                  (conj (rest pl) (list (+ (first m0) (first m)) mdeg))
                   (conj pl m)
                 )
               )
@@ -125,7 +134,7 @@
 )
 
 (defn polyvec-to-list [pv]
-  (condense-identical-monomials
+  (combine-identical-monomials
     (sort-by (fn [x] (nth x 1)) cmp-grevlex (map condense-monomial (rest pv)))
   )
 )

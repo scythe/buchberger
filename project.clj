@@ -9,6 +9,7 @@
   :dependencies [[org.clojure/clojure "1.10.0"]
                  [org.clojure/clojurescript "1.10.520"]
                  [org.clojure/core.async  "0.4.500"]
+                 [org.clojure/core.match "0.3.0"]
                  [reagent "0.8.1"]
                  [instaparse "1.4.10"]]
 
