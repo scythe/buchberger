@@ -145,8 +145,20 @@
   )
 )
 
+(defn varpow-to-string [vnum pow]
+  (echo "vp-to-string" (str "x<sub>" vnum "</sub><sup>" pow "</sup>"))
+)
+
+(defn monomial-to-string [ml]
+  (apply str (conj (map varpow-to-string (iterate inc 1) (second ml)) (first ml)))
+)
+
+(defn polylist-to-string [pl]
+  (string/join " + " (map monomial-to-string (echo "poly to convert" pl)))
+)
+
 ;; TODO sort polynomials grevlex
-(defn do-calc [] (pp/pprint (polyvec-to-list (parse-poly (:poly @app-state)))))
+(defn do-calc [] (println (polylist-to-string (polyvec-to-list (parse-poly (:poly @app-state))))))
 
 (defn readpoly []
   [:div {:class-name "poly-inputs"}
