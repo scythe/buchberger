@@ -20,26 +20,6 @@
   )
 )
 
-;; define your app data so that it doesn't get over-written on reload
-
-(defonce app-state (atom {:title "Buchberger's Algorithm Calculator"
-                          :poly ""
-                          :result ""}))
-
-(defn title []
-  [:div {:class-name "title"}
-   [:h1 (:title @app-state)]
-  ]
-)
-
-(defn more-polys [] 
-  (do
-    (echo "test" (:result @app-state))
-    (swap! app-state update-in [:result] (constantly "test x<sub>1</sub>"))
-    (echo "test2" (:result @app-state))
-  )
-)
-
 (insta/defparser parse-poly
     "polynomial = ws monomial (plus monomial)*
      <ws> = <' '*>
@@ -146,19 +126,71 @@
 )
 
 (defn varpow-to-string [vnum pow]
-  (echo "vp-to-string" (str "x<sub>" vnum "</sub><sup>" pow "</sup>"))
+  (match [(echo "vpts pow" pow)]
+   [0] ""
+   [1] (str "x<sub>" vnum "</sub>")
+   [_] (str "x<sub>" vnum "</sub><sup>" pow "</sup>")
+  )
 )
 
 (defn monomial-to-string [ml]
-  (apply str (conj (map varpow-to-string (iterate inc 1) (second ml)) (first ml)))
+  (apply str (conj (map varpow-to-string (iterate inc 1) (second ml))
+                   (first ml)))
 )
 
 (defn polylist-to-string [pl]
   (string/join " + " (map monomial-to-string (echo "poly to convert" pl)))
 )
 
-;; TODO sort polynomials grevlex
+(defn lcmd [poly] ;; leading-coefficient-multidegree
+  (second (first poly))
+)
+
+(defn scalar-mul [poly k]
+  (map #(conj (rest %) (* (first %) k)) poly)
+)
+
+(defn monomial-quot [m d]
+)
+
+(defn gen-poly-div [poly dsor]
+
+
+;; define your app data so that it doesn't get over-written on reload
+
+(defonce app-state (atom {:title "Buchberger's Algorithm Calculator"
+                          :poly ""
+                          :system (sorted-set-by #(cmp-grevlex (lcmd %1) 
+                                                               (lcmd %2)))
+                          :result ""}))
+
+(defn title []
+  [:div {:class-name "title"}
+   [:h1 (:title @app-state)]
+  ]
+)
+
+(defn more-polys [] 
+  (do
+    (echo "test" (:result @app-state))
+    (swap! app-state update-in [:system] 
+           #(conj % (polyvec-to-list (parse-poly (:poly @app-state)))))
+    (swap! app-state assoc :poly "")
+    (swap! app-state assoc :result 
+           (string/join "<br/>" (map polylist-to-string (:system @app-state))))
+    (echo "test2" (:result @app-state))
+  )
+)
+
 (defn do-calc [] (println (polylist-to-string (polyvec-to-list (parse-poly (:poly @app-state))))))
+
+(defn clear-system []
+  (do
+    (swap! app-state assoc :system (sorted-set-by #(cmp-grevlex (lcmd %1)
+                                                                (lcmd %2))))
+    (swap! app-state assoc :result "")
+  )
+)
 
 (defn readpoly []
   [:div {:class-name "poly-inputs"}
@@ -171,14 +203,15 @@
                           app-state
                           assoc
                           :poly (-> % .-target .-value)
-                         )
+                        )
            }
    ]
    [:button {:on-click more-polys} "More..."]
    [:button {:on-click do-calc} "Calculate!"]
+   [:button {:on-click clear-system} "Clear"]
   ]
 )
-
+  
 (defn result []
   [:div {:class-name "result"}
    (if (not= (:result @app-state) "")
