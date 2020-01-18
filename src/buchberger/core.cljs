@@ -146,11 +146,44 @@
   (second (first poly))
 )
 
-(defn scalar-mul [poly k]
-  (map #(conj (rest %) (* (first %) k)) poly)
+(defn monomial-mul [m1 m2]
+  (list (* (first m1) (first m2)) (sum-lists (second m1) (second m2)))
+)
+
+(defn poly-times-monomial [poly m]
+  (map #(monomial-mul m %) poly)
+)
+
+(defn poly-sum [p1 p2]
+  (combine-identical-monomials (sort-by second cmp-grevlex (concat p1 p2)))
+)
+
+(defn multideg-quot [md dd]
+  (if (> (count dd) (count md))
+    '()
+    (if (= 0 (count dd))
+      md
+      (let [qi (- (first md) (first dd))]
+        (if (< 0 qi)
+          '()
+          (if (= 1 (count md))
+            (list qi)
+            (match [(multideg-quot (rest md) (rest dd))]
+             ['()] '()
+             [qv] (conj qv qi)
+            )
+          )
+        )
+      )
+    )
+  )
 )
 
 (defn monomial-quot [m d]
+  (match [(multideg-quot (second m) (second d))]
+   ['()] '()
+   [q] (list (/ (first m) (first d)) q)
+  )
 )
 
 (defn gen-poly-div [poly dsor]
