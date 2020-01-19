@@ -107,9 +107,12 @@
 
 (defn combine-identical-monomials [pl]
   (let [add (fn [pl, m]
-              (let [m0 (first pl) mdeg (nth m 1)]
-                (if (and m0 (= (nth m0 1) mdeg)) ;; if monomials exist and have same multidegree
-                  (conj (rest pl) (list (+ (first m0) (first m)) mdeg))
+              (let [m0 (first pl)]
+                (if (and m0 (= (second m0) (second m))) ;; if monomials exist and have same multidegree
+                  (match [(+ (first m0) (first m))]
+                   [0] (rest pl)
+                   [csum] (conj (rest pl) csum)
+                  )
                   (conj pl m)
                 )
               )
@@ -150,6 +153,10 @@
   (list (* (first m1) (first m2)) (sum-lists (second m1) (second m2)))
 )
 
+(defn negate [m]
+  (conj (rest m) (- (first m)))
+)
+
 (defn poly-times-monomial [poly m]
   (map #(monomial-mul m %) poly)
 )
@@ -168,9 +175,8 @@
           '()
           (if (= 1 (count md))
             (list qi)
-            (match [(multideg-quot (rest md) (rest dd))]
-             ['()] '()
-             [qv] (conj qv qi)
+            (when-let [qv (multideg-quot (rest md) (rest dd))]
+              (conj qv qi)
             )
           )
         )
@@ -180,14 +186,22 @@
 )
 
 (defn monomial-quot [m d]
-  (match [(multideg-quot (second m) (second d))]
-   ['()] '()
-   [q] (list (/ (first m) (first d)) q)
+  (when-let q [(multideg-quot (second m) (second d))]
+    (list (/ (first m) (first d)) q)
+  )
+)
+
+(defn gen-poly-div-quo [poly dsor quo]
+  (if-let [qnew (monomial-quot (first poly) (first dsor))]
+    (gen-poly-div-quo (poly-sum poly (negate (monomial-mul dsor qnew))) 
+                      dsor (conj quo qnew))
+    (list quo poly)
   )
 )
 
 (defn gen-poly-div [poly dsor]
-
+  (gen-poly-div-quo poly dsor '())
+)
 
 ;; define your app data so that it doesn't get over-written on reload
 
@@ -215,7 +229,12 @@
   )
 )
 
-(defn do-calc [] (println (polylist-to-string (polyvec-to-list (parse-poly (:poly @app-state))))))
+(defn do-calc [] 
+  (if (>= (count (:system @app-state)) 2) 
+    (println (gen-poly-div (first (:system @app-state)) (second (:system @app-state))))
+    (println (polylist-to-string (polyvec-to-list (parse-poly (:poly @app-state)))))
+  )
+)
 
 (defn clear-system []
   (do
