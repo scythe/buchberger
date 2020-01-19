@@ -158,7 +158,7 @@
 )
 
 (defn poly-times-monomial [poly m]
-  (map #(monomial-mul m %) poly)
+  (map #(monomial-mul (echo "ptm m" m) %) (echo "ptm p" poly))
 )
 
 (defn poly-sum [p1 p2]
@@ -167,16 +167,16 @@
 
 (defn multideg-quot [md dd]
   (if (> (count dd) (count md))
-    '()
+    nil
     (if (= 0 (count dd))
       md
       (let [qi (- (first md) (first dd))]
         (if (< qi 0)
-          '()
-          (if (= 1 (count md))
-            (list qi)
-            (when-let [qv (multideg-quot (rest md) (rest dd))]
+          nil
+          (when-let [qv (multideg-quot (rest md) (rest dd))]
+            (if (or (> qi 0) (> (count qv) 0))
               (conj qv qi)
+              qv
             )
           )
         )
@@ -186,14 +186,14 @@
 )
 
 (defn monomial-quot [m d]
-  (when-let [q (multideg-quot (second m) (second d))]
+  (when-let [q (echo "multideg-quot" (multideg-quot (second (echo "m" m)) (second (echo "d" d))))]
     (list (/ (first m) (first d)) q)
   )
 )
 
 (defn gen-poly-div-quo [poly dsor quo]
   (if-let [qnew (monomial-quot (first poly) (first dsor))]
-    (gen-poly-div-quo (poly-sum poly (poly-times-monomial dsor (negate qnew)))
+    (gen-poly-div-quo (poly-sum poly (echo "poly-times-monomial" (poly-times-monomial dsor (negate qnew))))
                       dsor (conj quo qnew))
     (list quo poly)
   )
