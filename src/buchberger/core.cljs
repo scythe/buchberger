@@ -171,7 +171,7 @@
     (if (= 0 (count dd))
       md
       (let [qi (- (first md) (first dd))]
-        (if (< 0 qi)
+        (if (< qi 0)
           '()
           (if (= 1 (count md))
             (list qi)
@@ -186,14 +186,14 @@
 )
 
 (defn monomial-quot [m d]
-  (when-let q [(multideg-quot (second m) (second d))]
+  (when-let [q (multideg-quot (second m) (second d))]
     (list (/ (first m) (first d)) q)
   )
 )
 
 (defn gen-poly-div-quo [poly dsor quo]
   (if-let [qnew (monomial-quot (first poly) (first dsor))]
-    (gen-poly-div-quo (poly-sum poly (negate (monomial-mul dsor qnew))) 
+    (gen-poly-div-quo (poly-sum poly (poly-times-monomial dsor (negate qnew)))
                       dsor (conj quo qnew))
     (list quo poly)
   )
