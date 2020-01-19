@@ -191,16 +191,35 @@
   )
 )
 
-(defn gen-poly-div-quo [poly dsor quo]
-  (if-let [qnew (monomial-quot (first poly) (first dsor))]
-    (gen-poly-div-quo (poly-sum poly (echo "poly-times-monomial" (poly-times-monomial dsor (negate qnew))))
-                      dsor (conj quo qnew))
-    (list quo poly)
+(defn next-poly-quo [poly dsors n]
+  (if-let [di (first dsors)]
+    (if-let [qnew (monomial-quot (first poly) (first di))]
+      (list n qnew)
+      (next-poly-quo poly (rest dsors) (+ 1 n))
+    )
+    (list -1 nil)
   )
 )
 
-(defn gen-poly-div [poly dsor]
-  (gen-poly-div-quo poly dsor '())
+(defn gen-poly-div-quos-rdr [poly dsors quos rdr]
+  (if (= 0 (count poly))
+    (list quos rdr)
+    (let [[ix qnew] (next-poly-quo poly dsors 0)]
+      (if (= -1 ix)
+        (gen-poly-div-quos-rdr (rest poly) dsors quos (conj rdr (first poly)))
+        (gen-poly-div-quos-rdr 
+          (poly-sum poly (poly-times-monomial (nth dsors ix) (negate qnew)))
+          dsors
+          (concat (take ix quos) (conj (nth quos ix) qnew) (drop (+ 1 ix) quos))
+          rdr
+        )
+      )
+    )
+  )
+)
+
+(defn gen-poly-div [poly dsors]
+  (gen-poly-div-quos-rdr poly dsors (repeat (count dsors) '()) '())
 )
 
 ;; define your app data so that it doesn't get over-written on reload
@@ -231,7 +250,7 @@
 
 (defn do-calc [] 
   (if (>= (count (:system @app-state)) 2) 
-    (println (gen-poly-div (first (:system @app-state)) (second (:system @app-state))))
+    (println (gen-poly-div (first (:system @app-state)) (rest (:system @app-state))))
     (println (polylist-to-string (polyvec-to-list (parse-poly (:poly @app-state)))))
   )
 )
