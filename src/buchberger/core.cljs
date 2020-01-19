@@ -111,7 +111,7 @@
                 (if (and m0 (= (second m0) (second m))) ;; if monomials exist and have same multidegree
                   (match [(+ (first m0) (first m))]
                    [0] (rest pl)
-                   [csum] (conj (rest pl) csum)
+                   [csum] (conj (rest pl) (list csum (second m)))
                   )
                   (conj pl m)
                 )
