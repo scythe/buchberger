@@ -165,6 +165,18 @@
   (combine-identical-monomials (sort-by second cmp-grevlex (concat p1 p2)))
 )
 
+(defn multideg-pdm [d1 d2] ;; positive difference from maximum of multidegrees
+  (let [conj-two (fn [cdrs cars] (list (conj (first cdrs) (first cars))
+                                       (conj (second cdrs) (second cars))))
+        pdm (fn [c1 c2] (let [cm (max c1 c2)] (list (- cm c1) (- cm c2))))
+        fdeg #(nth 0 % 0)]
+    (if (> (+ (count d1) (count d2)) 0)
+      (conj-two (multideg-pdm (rest d1) (rest d2)) (pdm (fdeg d1) (fdeg d2)))
+      '(() ())
+    )
+  )
+)
+
 (defn multideg-quot [md dd]
   (if (> (count dd) (count md))
     nil
@@ -182,6 +194,12 @@
         )
       )
     )
+  )
+)
+
+(defn monomial-cancel-factors [m1 m2]
+  (let [[m1c m2c] (multideg-pdm (second m1) (second m2))]
+    (list (list (/ (first m1)) m1c) (list (- (/ (first m2))) m2c))
   )
 )
 
@@ -220,6 +238,11 @@
 
 (defn gen-poly-div [poly dsors]
   (gen-poly-div-quos-rdr poly dsors (repeat (count dsors) '()) '())
+)
+
+(defn cancel-lt [p1 p2]
+  (apply poly-sum (map poly-times-monomial (list p1 p2) 
+                       (monomial-cancel-factors (first p1) (first p2))))
 )
 
 ;; define your app data so that it doesn't get over-written on reload
