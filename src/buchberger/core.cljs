@@ -149,6 +149,15 @@
   (second (first poly))
 )
 
+(defn cmp-poly-grevlex [p1 p2]
+  (let [cv (cmp-grevlex (lcmd p1) (lcmd p2))]
+    (if (zero? cv)
+      (compare p1 p2)
+      cv
+    )
+  )
+)
+
 (defn monomial-mul [m1 m2]
   (list (* (first m1) (first m2)) (sum-lists (second m1) (second m2)))
 )
@@ -245,12 +254,52 @@
                        (monomial-cancel-factors (first p1) (first p2))))
 )
 
+(defn buchberger-expand-basis [sys i j]
+  (if (>= i (count sys))
+    sys
+    (if (>= j (count sys))
+      (buchberger-expand-basis sys (+ i 1) (+ i 2))
+      (let [p (second (gen-poly-div (cancel-lt (nth sys i) (nth sys j)) sys))]
+        (if (empty? p)
+          (buchberger-expand-basis sys i (+ j 1))
+          (buchberger-expand-basis (conj sys p) i (+ j 1))
+        )
+      )
+    )
+  )
+)
+
+(defn buchberger [sys]
+  (buchberger-expand-basis sys 0 1)
+)
+
+(defn prune-grobner-basis-at [sys n]
+  (if (< n 0)
+    sys
+    (let [p (nth sys n)
+          quots (map #(multideg-quot (lcmd p) (lcmd %)) (drop (+ n 1) sys))]
+      (if (apply or quots) ;; if any p' in sys has an LT that divides LT(p)
+        (prune-grobner-basis-at (disj sys p) (- n 1))
+        (prune-grobner-basis-at sys (- n 1))
+      )
+    )
+  )
+)
+        
+(defn minimize-grobner-basis [sys]
+  (prune-grobner-basis-at sys (- (count sys) 1))
+)
+
+(defn reduce-grobner-basis [sys]
+  (apply sorted-set-by cmp-poly-grevlex
+         (for [p sys] (second (gen-poly-div p (disj sys p)))))
+)
+
 ;; define your app data so that it doesn't get over-written on reload
 
 (defonce app-state (atom {:title "Buchberger's Algorithm Calculator"
                           :poly ""
-                          :system (sorted-set-by #(cmp-grevlex (lcmd %1) 
-                                                               (lcmd %2)))
+                          :system (sorted-set-by cmp-poly-grevlex)
                           :result ""}))
 
 (defn title []
@@ -280,8 +329,7 @@
 
 (defn clear-system []
   (do
-    (swap! app-state assoc :system (sorted-set-by #(cmp-grevlex (lcmd %1)
-                                                                (lcmd %2))))
+    (swap! app-state assoc :system (sorted-set-by cmp-poly-grevlex))
     (swap! app-state assoc :result "")
   )
 )
