@@ -74,8 +74,8 @@
 (defn cmp-grevlex [l1 l2]
   (let [s1 (reduce + l1)
         s2 (reduce + l2)
-        n1 (count (echo "cmp-grevlex l1" l1))
-        n2 (count (echo "cmp-grevlex l2" l2))
+        n1 (count l1)
+        n2 (count l2)
         cmp-lists (fn cmp-lists [l1 l2]
                     (if (empty? l1)
                       0
@@ -292,7 +292,7 @@
 (defn prune-grobner-basis-at [sys n]
   (if (< n 0)
     sys
-    (let [p (nth sys n)
+    (let [p (nth (seq sys) n)
           quots (map #(multideg-quot (lcmd p) (lcmd %)) (drop (+ n 1) sys))]
       (if (some identity quots) ;; if any p' in sys has an LT that divides LT(p)
         (prune-grobner-basis-at (disj sys p) (- n 1))
