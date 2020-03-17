@@ -105,6 +105,20 @@
   )
 )
 
+(defn cmp-lex [l1 l2]
+  (match [(empty? l1) (empty? l2)]
+   [true true] 0
+   [true false] -1
+   [false true] 1
+   [false false] (cond
+                   (> (first l1) (first l2)) 1
+                   (< (first l1) (first l2)) -1
+                   :else (cmp-lex (rest l1) (rest l2))
+                 )
+  )
+)
+
+
 (defn combine-identical-monomials [pl]
   (let [add (fn [pl, m]
               (let [m0 (first pl)]
@@ -175,10 +189,11 @@
 )
 
 (defn multideg-pdm [d1 d2] ;; positive difference from maximum of multidegrees
-  (let [conj-two (fn [cdrs cars] (list (conj (first cdrs) (first cars))
-                                       (conj (second cdrs) (second cars))))
+  (let [mdconj (fn [md exp] (if (and (empty? md) (= 0 exp)) md (conj md exp)))
+        conj-two (fn [mds exps] (list (mdconj (first mds) (first exps))
+                                      (mdconj (second mds) (second exps))))
         pdm (fn [c1 c2] (let [cm (max c1 c2)] (list (- cm c1) (- cm c2))))
-        fdeg #(nth 0 % 0)]
+        fdeg #(nth % 0 0)]
     (if (> (+ (count d1) (count d2)) 0)
       (conj-two (multideg-pdm (rest d1) (rest d2)) (pdm (fdeg d1) (fdeg d2)))
       '(() ())
@@ -230,14 +245,14 @@
 
 (defn gen-poly-div-quos-rdr [poly dsors quos rdr]
   (if (= 0 (count poly))
-    (list quos rdr)
+    (list quos (combine-identical-monomials (sort-by second cmp-grevlex rdr)))
     (let [[ix qnew] (next-poly-quo poly dsors 0)]
       (if (= -1 ix)
         (gen-poly-div-quos-rdr (rest poly) dsors quos (conj rdr (first poly)))
         (gen-poly-div-quos-rdr 
           (poly-sum poly (poly-times-monomial (nth dsors ix) (negate qnew)))
           dsors
-          (concat (take ix quos) (conj (nth quos ix) qnew) (drop (+ 1 ix) quos))
+          (concat (take ix  quos) (list (conj (nth quos ix) qnew)) (drop (+ 1 ix) quos))
           rdr
         )
       )
@@ -246,20 +261,21 @@
 )
 
 (defn gen-poly-div [poly dsors]
-  (gen-poly-div-quos-rdr poly dsors (repeat (count dsors) '()) '())
+  (gen-poly-div-quos-rdr (echo "gpd dividend" poly) dsors (repeat (count dsors) '()) '())
 )
 
 (defn cancel-lt [p1 p2]
-  (apply poly-sum (map poly-times-monomial (list p1 p2) 
+  (apply poly-sum (map poly-times-monomial (list (echo "cancel-lt p1" p1) (echo "cancel-lt p2" p2)) 
                        (monomial-cancel-factors (first p1) (first p2))))
 )
 
 (defn buchberger-expand-basis [sys i j]
   (if (>= i (count sys))
     sys
-    (if (>= j (count sys))
+    (if (>= j (min (count sys) 9))
       (buchberger-expand-basis sys (+ i 1) (+ i 2))
-      (let [p (second (gen-poly-div (cancel-lt (nth sys i) (nth sys j)) sys))]
+      (let [ps (seq sys)
+            p (second (gen-poly-div (cancel-lt (nth ps i) (nth ps j)) ps))]
         (if (empty? p)
           (buchberger-expand-basis sys i (+ j 1))
           (buchberger-expand-basis (conj sys p) i (+ j 1))
@@ -270,7 +286,7 @@
 )
 
 (defn buchberger [sys]
-  (buchberger-expand-basis sys 0 1)
+  (buchberger-expand-basis (echo "sys" sys) 0 1)
 )
 
 (defn prune-grobner-basis-at [sys n]
@@ -278,7 +294,7 @@
     sys
     (let [p (nth sys n)
           quots (map #(multideg-quot (lcmd p) (lcmd %)) (drop (+ n 1) sys))]
-      (if (apply or quots) ;; if any p' in sys has an LT that divides LT(p)
+      (if (some identity quots) ;; if any p' in sys has an LT that divides LT(p)
         (prune-grobner-basis-at (disj sys p) (- n 1))
         (prune-grobner-basis-at sys (- n 1))
       )
